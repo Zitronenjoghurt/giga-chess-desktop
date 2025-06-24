@@ -1,0 +1,10 @@
+[package]
+name = "giga-chess-desktop"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+eframe = "0.31.1"
+egui = "0.31.1"
+egui_extras = { version = "0.31.1", features = ["svg"] }
+giga-chess = "0.8.4"
