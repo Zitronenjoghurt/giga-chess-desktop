@@ -1282,9 +1282,9 @@ dependencies = [
 
 [[package]]
 name = "giga-chess"
-version = "0.8.4"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50663d77bb965c9a80000fa49c7d6238c9991ef7918f51e503f0dba04bef97e8"
+checksum = "50442ef198a7fe71e49e48f551964eb4d28a7d627b4fe7b8a61fd764f1551621"
 dependencies = [
  "chrono",
  "rand 0.9.1",

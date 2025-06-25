@@ -7,4 +7,4 @@ edition = "2024"
 eframe = "0.31.1"
 egui = "0.31.1"
 egui_extras = { version = "0.31.1", features = ["svg"] }
-giga-chess = "0.8.4"
+giga-chess = "0.9.0"

@@ -12,9 +12,10 @@ pub struct MainMenuView {
 
 impl View for MainMenuView {
     fn new(state: &AppState) -> Self {
+        let game = Game::new(&state.engine, PGNMetadata::now());
         Self {
-            chess_board: ChessBoardComponent::new(),
-            game: Game::new(&state.engine, PGNMetadata::now()),
+            chess_board: ChessBoardComponent::new(state, &game),
+            game,
         }
     }
 
