@@ -1,6 +1,8 @@
 use crate::app::GigaChessApp;
 
+mod api;
 mod app;
+mod types;
 
 fn main() {
     let native_options = eframe::NativeOptions::default();

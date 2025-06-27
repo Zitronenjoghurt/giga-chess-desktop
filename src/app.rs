@@ -5,6 +5,7 @@ use egui::Context;
 
 mod asset_server;
 mod components;
+mod modals;
 mod state;
 mod views;
 
