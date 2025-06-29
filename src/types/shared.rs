@@ -1,3 +1,4 @@
+use crate::persistence::PersistentObject;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 #[derive(Debug)]
@@ -52,5 +53,17 @@ impl<T: Clone> Shared<T> {
 impl<T: Copy> Shared<T> {
     pub fn get_copy(&self) -> T {
         *self.lock()
+    }
+}
+
+impl<T: PersistentObject> PersistentObject for Shared<T> {
+    type PersistentType = T::PersistentType;
+
+    fn save_state(&self) -> Self::PersistentType {
+        self.lock().save_state()
+    }
+
+    fn load_from_state(state: Self::PersistentType) -> Self {
+        Self::new(T::load_from_state(state))
     }
 }

@@ -4,12 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+directories = "6.0.0"
 eframe = "0.31.1"
 egui = "0.31.1"
 egui_extras = { version = "0.31.1", features = ["svg"] }
-giga-chess = "0.9.0"
+giga-chess = { version = "0.9.0", features = ["serde"] }
 giga-chess-api-types = { version = "0.1.0", features = ["serde", "uuid"] }
 reqwest = { version = "0.12.20", features = ["json"] }
 serde = { version = "1.0.219", features = ["derive"] }
 thiserror = "2.0.12"
 tokio = { version = "1.45.1", features = ["rt-multi-thread"] }
+serde_json = "1.0.140"
+log = "0.4.27"

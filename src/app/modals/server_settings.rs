@@ -6,6 +6,7 @@ use egui::{Id, Ui};
 pub struct ServerSettingsModal {
     open: bool,
     url: String,
+    initialized: bool,
 }
 
 impl Modal for ServerSettingsModal {
@@ -22,6 +23,11 @@ impl Modal for ServerSettingsModal {
     }
 
     fn render_content(&mut self, ui: &mut Ui, state: &mut AppState) {
+        if !self.initialized {
+            self.url = state.api.get_server_url().unwrap_or_default().to_string();
+            self.initialized = true;
+        }
+
         ui.horizontal(|ui| {
             ui.label("Server URL");
             ui.text_edit_singleline(&mut self.url);

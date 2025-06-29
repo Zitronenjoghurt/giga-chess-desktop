@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub enum LoginStateStatus {
     #[default]
@@ -8,7 +10,7 @@ pub enum LoginStateStatus {
     Error,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub enum LoginState {
     #[default]
     Idle,

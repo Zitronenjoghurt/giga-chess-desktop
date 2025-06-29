@@ -2,6 +2,7 @@ use crate::app::GigaChessApp;
 
 mod api;
 mod app;
+mod persistence;
 mod types;
 
 fn main() {

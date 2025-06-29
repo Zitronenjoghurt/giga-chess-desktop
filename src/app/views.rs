@@ -1,17 +1,19 @@
 mod main_menu;
+mod sandbox;
 
 use crate::app::state::AppState;
 use crate::app::views::main_menu::MainMenuView;
 use egui::Context;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
 pub enum ViewID {
     #[default]
     MainMenu,
 }
 
 pub trait View {
-    fn new(state: &AppState) -> Self;
+    fn new() -> Self;
     fn render(&mut self, ctx: &Context, state: &mut AppState);
 }
 
@@ -21,9 +23,9 @@ pub struct ViewManager {
 }
 
 impl View for ViewManager {
-    fn new(state: &AppState) -> Self {
+    fn new() -> Self {
         Self {
-            main_menu: MainMenuView::new(state),
+            main_menu: MainMenuView::new(),
         }
     }
 

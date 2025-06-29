@@ -1,10 +1,12 @@
 use crate::api::error::ApiError;
-use crate::api::MultiplayerClient;
+use crate::api::{MultiplayerClient, MultiplayerClientPersist};
 use crate::app::asset_server::AssetServer;
 use crate::app::state::login::LoginState;
 use crate::app::views::ViewID;
+use crate::persistence::PersistentObject;
 use crate::types::shared::Shared;
 use giga_chess::prelude::Engine;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 pub mod login;
@@ -38,5 +40,33 @@ impl AppState {
                     _ => login_state.set(LoginState::Error(err.to_string())),
                 },
             });
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AppStatePersist {
+    pub api: MultiplayerClientPersist,
+    pub current_view: ViewID,
+    pub login_state: LoginState,
+}
+
+impl PersistentObject for AppState {
+    type PersistentType = AppStatePersist;
+
+    fn save_state(&self) -> Self::PersistentType {
+        AppStatePersist {
+            api: self.api.save_state(),
+            current_view: self.current_view,
+            login_state: self.login_state.get_clone(),
+        }
+    }
+
+    fn load_from_state(state: Self::PersistentType) -> Self {
+        Self {
+            api: MultiplayerClient::load_from_state(state.api),
+            current_view: state.current_view,
+            login_state: Shared::new(state.login_state),
+            ..Default::default()
+        }
     }
 }

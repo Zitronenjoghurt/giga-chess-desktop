@@ -1,8 +1,10 @@
 use crate::api::error::{ApiError, ApiResult};
+use crate::persistence::PersistentObject;
 use giga_chess_api_types::body::login::LoginBody;
 use giga_chess_api_types::response::login::LoginResponse;
 use reqwest::{Client, RequestBuilder, StatusCode};
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use tokio::runtime::Runtime;
 
@@ -26,6 +28,10 @@ impl Default for MultiplayerClient {
 }
 
 impl MultiplayerClient {
+    pub fn get_server_url(&self) -> Option<&str> {
+        self.server_url.as_deref()
+    }
+
     pub fn set_server_url(&mut self, server_url: impl Into<String>) {
         self.server_url = Some(server_url.into());
     }
@@ -111,5 +117,27 @@ impl MultiplayerClient {
         let request = self.client.post(format!("{server_url}/login")).json(&body);
 
         self.spawn_request(request, callback);
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MultiplayerClientPersist {
+    pub server_url: Option<String>,
+}
+
+impl PersistentObject for MultiplayerClient {
+    type PersistentType = MultiplayerClientPersist;
+
+    fn save_state(&self) -> Self::PersistentType {
+        MultiplayerClientPersist {
+            server_url: self.server_url.clone(),
+        }
+    }
+
+    fn load_from_state(state: Self::PersistentType) -> Self {
+        Self {
+            server_url: state.server_url,
+            ..Default::default()
+        }
     }
 }

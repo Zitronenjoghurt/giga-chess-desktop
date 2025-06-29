@@ -1,7 +1,10 @@
 use crate::app::state::AppState;
+use crate::persistence::color::Color32Persist;
+use crate::persistence::PersistentObject;
 use egui::epaint::CircleShape;
 use egui::{Color32, Id, Pos2, Rect, Sense, Stroke, Ui, Vec2};
 use giga_chess::prelude::{Color, Game, Square};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -17,10 +20,17 @@ pub struct ChessBoardComponent {
     last_to: Option<Square>,
     threat_squares: Vec<Square>,
     target_square_map: HashMap<Square, Vec<Square>>,
+    dirty: bool,
+}
+
+impl Default for ChessBoardComponent {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ChessBoardComponent {
-    pub fn new(state: &AppState, game: &Game) -> Self {
+    pub fn new() -> Self {
         Self {
             light_color: Color32::from_rgb(255, 247, 228),
             light_color_highlight: Color32::from_rgb(255, 197, 178),
@@ -31,8 +41,9 @@ impl ChessBoardComponent {
             dragging_from: None,
             last_from: None,
             last_to: None,
-            threat_squares: game.get_check_threats(&state.engine),
-            target_square_map: game.legal_move_squares(),
+            threat_squares: Vec::new(),
+            target_square_map: HashMap::new(),
+            dirty: true,
         }
     }
 
@@ -43,6 +54,12 @@ impl ChessBoardComponent {
         perspective: Color,
         game: &mut Game,
     ) {
+        if self.dirty {
+            self.threat_squares = game.get_check_threats(&state.engine);
+            self.target_square_map = game.legal_move_squares();
+            self.dirty = false;
+        }
+
         let available_rect = ui.available_rect_before_wrap();
         let available_size = available_rect.width().min(available_rect.height());
 
@@ -144,8 +161,53 @@ impl ChessBoardComponent {
         if success {
             self.last_from = Some(from);
             self.last_to = Some(to);
-            self.threat_squares = game.get_check_threats(&state.engine);
-            self.target_square_map = game.legal_move_squares();
+            self.dirty = true;
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ChessBoardComponentPersist {
+    light_color: Color32Persist,
+    light_color_highlight: Color32Persist,
+    light_color_threat: Color32Persist,
+    dark_color: Color32Persist,
+    dark_color_highlight: Color32Persist,
+    dark_color_threat: Color32Persist,
+    last_from: Option<Square>,
+    last_to: Option<Square>,
+}
+
+impl PersistentObject for ChessBoardComponent {
+    type PersistentType = ChessBoardComponentPersist;
+
+    fn save_state(&self) -> Self::PersistentType {
+        ChessBoardComponentPersist {
+            light_color: self.light_color.save_state(),
+            light_color_highlight: self.light_color_highlight.save_state(),
+            light_color_threat: self.light_color_threat.save_state(),
+            dark_color: self.dark_color.save_state(),
+            dark_color_highlight: self.dark_color_highlight.save_state(),
+            dark_color_threat: self.dark_color_threat.save_state(),
+            last_from: self.last_from,
+            last_to: self.last_to,
+        }
+    }
+
+    fn load_from_state(state: Self::PersistentType) -> Self {
+        Self {
+            light_color: Color32::load_from_state(state.light_color),
+            light_color_highlight: Color32::load_from_state(state.light_color_highlight),
+            light_color_threat: Color32::load_from_state(state.light_color_threat),
+            dark_color: Color32::load_from_state(state.dark_color),
+            dark_color_highlight: Color32::load_from_state(state.dark_color_highlight),
+            dark_color_threat: Color32::load_from_state(state.dark_color_threat),
+            dragging_from: None,
+            last_from: state.last_from,
+            last_to: state.last_to,
+            threat_squares: vec![],
+            target_square_map: Default::default(),
+            dirty: true,
         }
     }
 }
