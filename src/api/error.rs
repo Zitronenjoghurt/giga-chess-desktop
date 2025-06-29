@@ -12,8 +12,18 @@ pub enum ApiError {
     Unauthorized(String),
     #[error("Unexpected error: {0}")]
     Unexpected(String),
+    #[error("Rate limited: {0}")]
+    RateLimited(String),
     #[error("Reqwest error: {0}")]
     Reqwest(#[from] reqwest::Error),
     #[error("Missing server url")]
     MissingServerUrl,
+    #[error("Invalid server url")]
+    InvalidServerUrl,
+    #[error("Communication error: {0}")]
+    Communication(String),
+    #[error("Connection error: {0}")]
+    Connection(String),
+    #[error("Connection timeout")]
+    ConnectionTimeout,
 }

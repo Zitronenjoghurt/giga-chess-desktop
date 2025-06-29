@@ -3,8 +3,8 @@ use giga_chess_api_types::body::login::LoginBody;
 use giga_chess_api_types::response::login::LoginResponse;
 use reqwest::{Client, RequestBuilder, StatusCode};
 use serde::de::DeserializeOwned;
+use std::error::Error;
 use tokio::runtime::Runtime;
-use tokio::time::sleep;
 
 pub mod error;
 
@@ -40,7 +40,6 @@ impl MultiplayerClient {
         F: FnOnce(ApiResult<T>) + Send + 'static,
     {
         self.runtime.spawn(async move {
-            sleep(std::time::Duration::from_millis(3000)).await;
             let result = match request.send().await {
                 Ok(response) if response.status().is_success() => {
                     match response.json::<T>().await {
@@ -58,13 +57,37 @@ impl MultiplayerClient {
                     StatusCode::UNAUTHORIZED => Err(ApiError::Unauthorized(
                         response.text().await.unwrap_or_default(),
                     )),
+                    StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited(
+                        response.text().await.unwrap_or_default(),
+                    )),
                     _ => Err(ApiError::Unexpected(format!(
                         "[{}]: {}",
                         response.status(),
                         response.text().await.unwrap_or_default()
                     ))),
                 },
-                Err(error) => Err(error.into()),
+                Err(error) => {
+                    let error_source = error
+                        .source()
+                        .map(|e| e.to_string())
+                        .unwrap_or_else(|| error.to_string());
+
+                    if error.is_builder() {
+                        Err(ApiError::InvalidServerUrl)
+                    } else if error.is_request() || error.is_connect() {
+                        Err(ApiError::Connection(format!(
+                            "{error} (source: {error_source})"
+                        )))
+                    } else if error.is_body() || error.is_decode() {
+                        Err(ApiError::Communication(format!(
+                            "{error} (source: {error_source})"
+                        )))
+                    } else if error.is_timeout() {
+                        Err(ApiError::ConnectionTimeout)
+                    } else {
+                        Err(error.into())
+                    }
+                }
             };
 
             callback(result);
