@@ -11,6 +11,7 @@ mod components;
 mod modals;
 mod state;
 mod views;
+mod windows;
 
 #[derive(Debug)]
 pub struct GigaChessApp {

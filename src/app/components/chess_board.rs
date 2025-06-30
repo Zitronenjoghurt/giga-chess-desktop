@@ -47,6 +47,12 @@ impl ChessBoardComponent {
         }
     }
 
+    pub fn clear(&mut self) {
+        self.last_from = None;
+        self.last_to = None;
+        self.dirty = true;
+    }
+
     pub fn render(
         &mut self,
         ui: &mut Ui,

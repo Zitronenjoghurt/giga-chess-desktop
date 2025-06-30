@@ -21,6 +21,10 @@ pub struct AppState {
 }
 
 impl AppState {
+    pub fn switch_view(&mut self, view: ViewID) {
+        self.current_view = view;
+    }
+
     pub fn set_multiplayer_url(&mut self, url: impl Into<String>) {
         self.api.set_server_url(url);
     }
