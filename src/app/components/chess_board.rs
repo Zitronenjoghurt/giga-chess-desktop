@@ -1,9 +1,10 @@
 use crate::app::state::AppState;
+use crate::game::AppGame;
 use crate::persistence::color::Color32Persist;
 use crate::persistence::PersistentObject;
 use egui::epaint::CircleShape;
-use egui::{Color32, Id, Pos2, Rect, Sense, Stroke, Ui, Vec2};
-use giga_chess::prelude::{Color, Game, Square};
+use egui::{Color32, Id, Painter, Pos2, Rect, Sense, Stroke, Ui, Vec2};
+use giga_chess::prelude::{Color, Square};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -53,50 +54,82 @@ impl ChessBoardComponent {
         self.dirty = true;
     }
 
-    pub fn render(
-        &mut self,
-        ui: &mut Ui,
-        state: &mut AppState,
-        perspective: Color,
-        game: &mut Game,
-    ) {
+    pub fn render(&mut self, ui: &mut Ui, state: &mut AppState, app_game: &mut AppGame) {
         if self.dirty {
-            self.threat_squares = game.get_check_threats(&state.engine);
-            self.target_square_map = game.legal_move_squares();
+            self.threat_squares = app_game.game.get_check_threats(&state.engine);
+            self.target_square_map = app_game.game.legal_move_squares();
             self.dirty = false;
         }
 
         let available_rect = ui.available_rect_before_wrap();
         let available_size = available_rect.width().min(available_rect.height());
-
         let square_size = available_size / 8.0;
 
         let (response, painter) =
             ui.allocate_painter(Vec2::new(available_size, available_size), Sense::hover());
         let board_rect = response.rect;
 
-        let mut squares = Square::iter_top_bottom().collect::<Vec<_>>();
-        if perspective == Color::Black {
-            squares.reverse();
-        };
+        for square in Square::iter_top_bottom() {
+            self.render_square(
+                ui,
+                state,
+                app_game,
+                &painter,
+                board_rect,
+                square,
+                square_size,
+            );
+        }
+    }
 
-        for square in squares {
-            let file = square.get_file();
-            let rank = square.get_rank();
+    #[allow(clippy::too_many_arguments)]
+    fn render_square(
+        &mut self,
+        ui: &mut Ui,
+        state: &mut AppState,
+        app_game: &mut AppGame,
+        painter: &Painter,
+        board_rect: Rect,
+        square: Square,
+        square_size: f32,
+    ) {
+        let (x, y) =
+            self.get_square_coordinates(square, app_game.perspective, board_rect, square_size);
 
-            let x = board_rect.min.x + (file - 1) as f32 * square_size;
-            let y = board_rect.min.y + (8 - rank) as f32 * square_size;
+        let square_rect = Rect::from_min_size(Pos2::new(x, y), Vec2::new(square_size, square_size));
+        let square_response = ui.allocate_rect(square_rect, Sense::drag());
 
-            let square_rect =
-                Rect::from_min_size(Pos2::new(x, y), Vec2::new(square_size, square_size));
-            let square_response = ui.allocate_rect(square_rect, Sense::drag());
+        let color = self.get_square_color(square);
+        painter.rect_filled(square_rect, 0.0, color);
 
-            let color = self.get_square_color(square);
-            painter.rect_filled(square_rect, 0.0, color);
+        self.render_piece(ui, state, app_game, square, square_rect, square_size);
 
-            if let Some((piece, color)) = game.board().get_piece_at(square.get_value()) {
-                let piece_id = Id::new(format!("piece_{}", square));
-                ui.allocate_ui_at_rect(square_rect, |ui| {
+        if let Some(dragged_square) = square_response.dnd_release_payload::<Square>() {
+            self.on_drag_drop(*dragged_square, square, app_game, state);
+        }
+
+        if let Some(dragging_from) = self.dragging_from {
+            if let Some(target_squares) = self.target_square_map.get(&dragging_from) {
+                if target_squares.contains(&square) {
+                    painter.add(self.get_target_circle(square_rect));
+                }
+            }
+        }
+    }
+
+    fn render_piece(
+        &mut self,
+        ui: &mut Ui,
+        state: &mut AppState,
+        app_game: &mut AppGame,
+        square: Square,
+        square_rect: Rect,
+        square_size: f32,
+    ) {
+        if let Some((piece, color)) = app_game.game.board().get_piece_at(square.get_value()) {
+            let piece_id = Id::new(format!("piece_{square}"));
+            ui.allocate_ui_at_rect(square_rect, |ui| {
+                if app_game.can_color_move(color) {
                     let drag_inner = ui.dnd_drag_source(piece_id, square, |ui| {
                         let image =
                             state
@@ -108,25 +141,43 @@ impl ChessBoardComponent {
                     if drag_inner.response.drag_stopped() {
                         self.dragging_from = None;
                     }
-                });
-
-                if ui.ctx().is_being_dragged(piece_id) {
-                    self.dragging_from = Some(square);
+                } else {
+                    let image = state
+                        .assets
+                        .get_piece_image(ui.ctx(), piece, color, square_size);
+                    ui.add(image);
                 }
-            }
+            });
 
-            if let Some(dragged_square) = square_response.dnd_release_payload::<Square>() {
-                self.on_drag_drop(*dragged_square, square, game, state);
-            }
-
-            if let Some(dragging_from) = self.dragging_from {
-                if let Some(target_squares) = self.target_square_map.get(&dragging_from) {
-                    if target_squares.contains(&square) {
-                        painter.add(self.get_target_circle(square_rect));
-                    }
-                }
+            if ui.ctx().is_being_dragged(piece_id) {
+                self.dragging_from = Some(square);
             }
         }
+    }
+
+    fn get_square_coordinates(
+        &self,
+        square: Square,
+        perspective: Color,
+        board_rect: Rect,
+        square_size: f32,
+    ) -> (f32, f32) {
+        let file = square.get_file();
+        let rank = square.get_rank();
+
+        let x = if perspective == Color::White {
+            board_rect.min.x + (file - 1) as f32 * square_size
+        } else {
+            board_rect.min.x + (8 - file) as f32 * square_size
+        };
+
+        let y = if perspective == Color::White {
+            board_rect.min.y + (8 - rank) as f32 * square_size
+        } else {
+            board_rect.min.y + (rank - 1) as f32 * square_size
+        };
+
+        (x, y)
     }
 
     fn get_square_color(&self, square: Square) -> Color32 {
@@ -161,9 +212,24 @@ impl ChessBoardComponent {
         }
     }
 
-    fn on_drag_drop(&mut self, from: Square, to: Square, game: &mut Game, state: &AppState) {
+    fn on_drag_drop(&mut self, from: Square, to: Square, app_game: &mut AppGame, state: &AppState) {
         self.dragging_from = None;
-        let success = game.play_move_from_to(&state.engine, from, to, None);
+
+        let (_, moving_color) = app_game
+            .game
+            .board()
+            .get_piece_at(from.get_value())
+            .unwrap();
+
+        let promotion_piece = if to.is_promotion_square(moving_color) {
+            Some(app_game.promotion_piece)
+        } else {
+            None
+        };
+
+        let success = app_game
+            .game
+            .play_move_from_to(&state.engine, from, to, promotion_piece);
         if success {
             self.last_from = Some(from);
             self.last_to = Some(to);
