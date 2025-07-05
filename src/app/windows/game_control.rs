@@ -36,7 +36,14 @@ impl ToggleableWindowWithData<AppGame> for GameControlWindow {
         _state: &mut AppState,
         app_game: &mut AppGame,
     ) -> WindowEvent {
+        ui.label(format!("Game status: {:?}", app_game.game.status()));
         ui.label(format!("Color to move: {:?}", app_game.game.side_to_move()));
+
+        if let Some(winner) = app_game.game.winner() {
+            ui.label(format!("Winner: {winner:?}"));
+        } else {
+            ui.label("Winner: None");
+        }
 
         ui.horizontal(|ui| {
             ui.label("Perspective:");

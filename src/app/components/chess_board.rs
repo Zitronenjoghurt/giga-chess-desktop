@@ -3,7 +3,7 @@ use crate::game::AppGame;
 use crate::persistence::color::Color32Persist;
 use crate::persistence::PersistentObject;
 use egui::epaint::CircleShape;
-use egui::{Color32, Id, Painter, Pos2, Rect, Sense, Stroke, Ui, Vec2};
+use egui::{Align2, Color32, FontId, Id, Painter, Pos2, Rect, Sense, Stroke, Ui, Vec2};
 use giga_chess::prelude::{Color, Square};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -63,7 +63,7 @@ impl ChessBoardComponent {
 
         let available_rect = ui.available_rect_before_wrap();
         let available_size = available_rect.width().min(available_rect.height());
-        let square_size = available_size / 8.0;
+        let square_size = available_size / 9.0;
 
         let (response, painter) =
             ui.allocate_painter(Vec2::new(available_size, available_size), Sense::hover());
@@ -80,6 +80,8 @@ impl ChessBoardComponent {
                 square_size,
             );
         }
+
+        self.render_file_rank(&painter, app_game.perspective, board_rect, square_size);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -155,6 +157,73 @@ impl ChessBoardComponent {
         }
     }
 
+    fn render_file_rank(
+        &mut self,
+        painter: &Painter,
+        perspective: Color,
+        board_rect: Rect,
+        square_size: f32,
+    ) {
+        let font_id = FontId::proportional(square_size * 0.35);
+        let text_color = Color32::from_gray(100);
+
+        for file in 1..=8 {
+            let file_char = if perspective == Color::White {
+                (b'A' + file - 1) as char
+            } else {
+                (b'A' + 8 - file) as char
+            };
+
+            let x = board_rect.min.x + (file as f32) * square_size;
+            let bottom_pos = Pos2::new(x, board_rect.max.y);
+            let top_pos = Pos2::new(x, board_rect.min.y);
+
+            painter.text(
+                bottom_pos,
+                Align2::CENTER_BOTTOM,
+                file_char,
+                font_id.clone(),
+                text_color,
+            );
+
+            painter.text(
+                top_pos,
+                Align2::CENTER_TOP,
+                file_char,
+                font_id.clone(),
+                text_color,
+            );
+        }
+
+        for rank in 1..=8 {
+            let rank_char = if perspective == Color::White {
+                (b'1' + rank - 1) as char
+            } else {
+                (b'1' + 8 - rank) as char
+            };
+
+            let y = board_rect.min.y + (9 - rank) as f32 * square_size;
+            let left_pos = Pos2::new(board_rect.min.x + square_size * 0.125, y);
+            let right_pos = Pos2::new(board_rect.max.x - square_size * 0.125, y);
+
+            painter.text(
+                left_pos,
+                Align2::LEFT_CENTER,
+                rank_char,
+                font_id.clone(),
+                text_color,
+            );
+
+            painter.text(
+                right_pos,
+                Align2::RIGHT_CENTER,
+                rank_char,
+                font_id.clone(),
+                text_color,
+            );
+        }
+    }
+
     fn get_square_coordinates(
         &self,
         square: Square,
@@ -166,15 +235,15 @@ impl ChessBoardComponent {
         let rank = square.get_rank();
 
         let x = if perspective == Color::White {
-            board_rect.min.x + (file - 1) as f32 * square_size
+            board_rect.min.x + (file as f32 - 0.5) * square_size
         } else {
-            board_rect.min.x + (8 - file) as f32 * square_size
+            board_rect.min.x + (8.5 - file as f32) * square_size
         };
 
         let y = if perspective == Color::White {
-            board_rect.min.y + (8 - rank) as f32 * square_size
+            board_rect.min.y + (8.5 - rank as f32) * square_size
         } else {
-            board_rect.min.y + (rank - 1) as f32 * square_size
+            board_rect.min.y + (rank as f32 - 0.5) * square_size
         };
 
         (x, y)

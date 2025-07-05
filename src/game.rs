@@ -1,4 +1,4 @@
-use giga_chess::prelude::{Color, Engine, Game, PGNMetadata, Piece};
+use giga_chess::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -21,6 +21,9 @@ impl AppGame {
     }
 
     pub fn can_color_move(&self, color: Color) -> bool {
+        if self.game.status() != GameStatus::Running {
+            return false;
+        }
         Some(color) == self.played_color || self.played_color.is_none()
     }
 }
