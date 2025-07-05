@@ -5,7 +5,7 @@ use crate::app::windows::game_control::GameControlWindow;
 use crate::app::windows::sandbox_game_creation::SandboxGameCreationWindow;
 use crate::app::windows::{ToggleableWindow, ToggleableWindowWithData, WindowEvent};
 use crate::game::AppGame;
-use egui::{Button, Context, RichText, TopBottomPanel, Window};
+use egui::{Button, CentralPanel, Context, RichText, TopBottomPanel, Window};
 use giga_chess::prelude::PGNMetadata;
 
 #[derive(Debug, Default)]
@@ -32,8 +32,12 @@ impl View for SandboxView {
         if window_event == WindowEvent::CreateSandboxGame {
             self.game = Some(AppGame::new(&state.engine, PGNMetadata::now()));
             self.chess_board.clear();
+            self.game_creation_window.set_open(false);
             self.game_control_window.set_open(true);
         }
+
+        // Just for the background color
+        CentralPanel::default().show(ctx, |_ui| {});
 
         TopBottomPanel::top("sandbox_top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {

@@ -1,7 +1,7 @@
 use crate::app::state::AppState;
 use crate::app::windows::{ToggleableWindow, ToggleableWindowWithData, WindowEvent};
 use crate::game::AppGame;
-use egui::{ComboBox, Id, Ui, WidgetText};
+use egui::{ComboBox, Grid, Id, Ui, WidgetText};
 use giga_chess::prelude::{Color, Piece};
 
 const PROMOTION_PIECES: [Piece; 4] = [Piece::Queen, Piece::Rook, Piece::Bishop, Piece::Knight];
@@ -36,14 +36,29 @@ impl ToggleableWindowWithData<AppGame> for GameControlWindow {
         _state: &mut AppState,
         app_game: &mut AppGame,
     ) -> WindowEvent {
-        ui.label(format!("Game status: {:?}", app_game.game.status()));
-        ui.label(format!("Color to move: {:?}", app_game.game.side_to_move()));
+        Grid::new("game_info")
+            .num_columns(2)
+            .spacing([40.0, 4.0])
+            .striped(true)
+            .show(ui, |ui| {
+                ui.label("Status:");
+                ui.label(format!("{:?}", app_game.game.status()));
+                ui.end_row();
 
-        if let Some(winner) = app_game.game.winner() {
-            ui.label(format!("Winner: {winner:?}"));
-        } else {
-            ui.label("Winner: None");
-        }
+                ui.label("Turn:");
+                ui.label(format!("{:?}", app_game.game.side_to_move()));
+                ui.end_row();
+
+                ui.label("Winner:");
+                ui.label(
+                    app_game
+                        .game
+                        .winner()
+                        .map(|winner| format!("{winner:?}"))
+                        .unwrap_or_else(|| "None".to_string()),
+                );
+                ui.end_row();
+            });
 
         ui.horizontal(|ui| {
             ui.label("Perspective:");
@@ -64,6 +79,13 @@ impl ToggleableWindowWithData<AppGame> for GameControlWindow {
                         );
                     }
                 });
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Auto perspective:");
+            let mut auto_adjust_perspective = app_game.get_auto_adjust_perspective();
+            ui.checkbox(&mut auto_adjust_perspective, "");
+            app_game.set_auto_adjust_perspective(auto_adjust_perspective);
         });
 
         WindowEvent::None

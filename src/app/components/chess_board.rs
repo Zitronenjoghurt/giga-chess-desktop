@@ -283,22 +283,7 @@ impl ChessBoardComponent {
 
     fn on_drag_drop(&mut self, from: Square, to: Square, app_game: &mut AppGame, state: &AppState) {
         self.dragging_from = None;
-
-        let (_, moving_color) = app_game
-            .game
-            .board()
-            .get_piece_at(from.get_value())
-            .unwrap();
-
-        let promotion_piece = if to.is_promotion_square(moving_color) {
-            Some(app_game.promotion_piece)
-        } else {
-            None
-        };
-
-        let success = app_game
-            .game
-            .play_move_from_to(&state.engine, from, to, promotion_piece);
+        let success = app_game.try_play_move(&state.engine, from, to);
         if success {
             self.last_from = Some(from);
             self.last_to = Some(to);
