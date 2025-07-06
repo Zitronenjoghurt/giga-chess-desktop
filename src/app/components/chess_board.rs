@@ -17,8 +17,6 @@ pub struct ChessBoardComponent {
     dark_color_highlight: Color32,
     dark_color_threat: Color32,
     dragging_from: Option<Square>,
-    last_from: Option<Square>,
-    last_to: Option<Square>,
     threat_squares: Vec<Square>,
     target_square_map: HashMap<Square, Vec<Square>>,
     dirty: bool,
@@ -40,8 +38,6 @@ impl ChessBoardComponent {
             dark_color_highlight: Color32::from_rgb(200, 168, 137),
             dark_color_threat: Color32::from_rgb(199, 103, 105),
             dragging_from: None,
-            last_from: None,
-            last_to: None,
             threat_squares: Vec::new(),
             target_square_map: HashMap::new(),
             dirty: true,
@@ -49,8 +45,6 @@ impl ChessBoardComponent {
     }
 
     pub fn clear(&mut self) {
-        self.last_from = None;
-        self.last_to = None;
         self.dirty = true;
     }
 
@@ -101,7 +95,10 @@ impl ChessBoardComponent {
         let square_rect = Rect::from_min_size(Pos2::new(x, y), Vec2::new(square_size, square_size));
         let square_response = ui.allocate_rect(square_rect, Sense::drag());
 
-        let color = self.get_square_color(square);
+        let last_move = app_game.game.latest_move();
+        let last_from = last_move.map(|mv| Square::new(mv.get_from()));
+        let last_to = last_move.map(|mv| Square::new(mv.get_to()));
+        let color = self.get_square_color(square, last_from, last_to);
         painter.rect_filled(square_rect, 0.0, color);
 
         self.render_piece(ui, state, app_game, square, square_rect, square_size);
@@ -249,8 +246,13 @@ impl ChessBoardComponent {
         (x, y)
     }
 
-    fn get_square_color(&self, square: Square) -> Color32 {
-        let is_highlight = Some(square) == self.last_from || Some(square) == self.last_to;
+    fn get_square_color(
+        &self,
+        square: Square,
+        last_from: Option<Square>,
+        last_to: Option<Square>,
+    ) -> Color32 {
+        let is_highlight = Some(square) == last_from || Some(square) == last_to;
         let is_threat = self.threat_squares.contains(&square);
 
         if square.is_white() {
@@ -285,8 +287,6 @@ impl ChessBoardComponent {
         self.dragging_from = None;
         let success = app_game.try_play_move(&state.engine, from, to);
         if success {
-            self.last_from = Some(from);
-            self.last_to = Some(to);
             self.dirty = true;
         }
     }
@@ -300,8 +300,6 @@ pub struct ChessBoardComponentPersist {
     dark_color: Color32Persist,
     dark_color_highlight: Color32Persist,
     dark_color_threat: Color32Persist,
-    last_from: Option<Square>,
-    last_to: Option<Square>,
 }
 
 impl PersistentObject for ChessBoardComponent {
@@ -315,8 +313,6 @@ impl PersistentObject for ChessBoardComponent {
             dark_color: self.dark_color.save_state(),
             dark_color_highlight: self.dark_color_highlight.save_state(),
             dark_color_threat: self.dark_color_threat.save_state(),
-            last_from: self.last_from,
-            last_to: self.last_to,
         }
     }
 
@@ -329,8 +325,6 @@ impl PersistentObject for ChessBoardComponent {
             dark_color_highlight: Color32::load_from_state(state.dark_color_highlight),
             dark_color_threat: Color32::load_from_state(state.dark_color_threat),
             dragging_from: None,
-            last_from: state.last_from,
-            last_to: state.last_to,
             threat_squares: vec![],
             target_square_map: Default::default(),
             dirty: true,
