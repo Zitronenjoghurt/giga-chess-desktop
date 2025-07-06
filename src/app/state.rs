@@ -39,11 +39,38 @@ impl AppState {
                 }
                 Err(err) => match err {
                     ApiError::BadRequest(_) | ApiError::Unauthorized(_) => {
-                        login_state.set(LoginState::InvalidCredentials)
+                        login_state.set(LoginState::error("Invalid username or password."))
                     }
                     _ => login_state.set(LoginState::Error(err.to_string())),
                 },
             });
+    }
+
+    pub fn register(
+        &mut self,
+        username: impl Into<String>,
+        password: impl Into<String>,
+        invite_code: impl Into<String>,
+    ) {
+        let login_state = self.login_state.clone();
+        login_state.set(LoginState::Loading);
+        self.api.register(
+            username,
+            password,
+            invite_code,
+            move |result| match result {
+                Ok(response) => {
+                    login_state.set(LoginState::Success(response.token));
+                }
+                Err(err) => match err {
+                    ApiError::BadRequest(error) => login_state.set(LoginState::error(error)),
+                    ApiError::Collision(_) => login_state.set(LoginState::error(
+                        "The username is already taken, please choose another one.",
+                    )),
+                    _ => login_state.set(LoginState::Error(err.to_string())),
+                },
+            },
+        );
     }
 }
 

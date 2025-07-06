@@ -4,15 +4,16 @@ use crate::app::state::AppState;
 use egui::{Id, TextEdit, Ui};
 
 #[derive(Debug, Default)]
-pub struct LoginModal {
-    open: bool,
+pub struct RegisterModal {
     username: String,
     password: String,
+    invite_code: String,
+    open: bool,
 }
 
-impl Modal for LoginModal {
+impl Modal for RegisterModal {
     fn id(&self) -> Id {
-        Id::new("login_modal")
+        Id::new("register_modal")
     }
 
     fn set_open(&mut self, open: bool) {
@@ -36,9 +37,14 @@ impl Modal for LoginModal {
                 .show(ui);
         });
 
+        ui.horizontal(|ui| {
+            ui.label("Invite Code");
+            ui.text_edit_singleline(&mut self.invite_code);
+        });
+
         let login_status = state.login_state.lock().get_status();
-        if login_status.is_not_successful_nor_loading() && ui.button("Login").clicked() {
-            state.login(&self.username, &self.password);
+        if login_status.is_not_successful_nor_loading() && ui.button("Register").clicked() {
+            state.register(&self.username, &self.password, &self.invite_code);
         }
 
         let mut event = ModalEvent::None;
@@ -49,7 +55,7 @@ impl Modal for LoginModal {
             }
             LoginStateStatus::Success => {
                 ui.label("Successfully registered");
-                event = ModalEvent::LoginSuccess;
+                event = ModalEvent::RegisterSuccess;
             }
             LoginStateStatus::Error => {
                 if let Some(error) = state.login_state.lock().get_error() {

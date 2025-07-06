@@ -1,6 +1,9 @@
 use crate::app::modals::login::LoginModal;
+use crate::app::modals::login_or_register::LoginOrRegisterModal;
+use crate::app::modals::register::RegisterModal;
 use crate::app::modals::server_settings::ServerSettingsModal;
-use crate::app::modals::Modal;
+use crate::app::modals::{Modal, ModalEvent};
+use crate::app::state::login::LoginStateStatus;
 use crate::app::state::AppState;
 use crate::app::views::{View, ViewID};
 use egui::{Button, CentralPanel, Context, RichText, Vec2};
@@ -8,15 +11,50 @@ use egui::{Button, CentralPanel, Context, RichText, Vec2};
 #[derive(Debug, Default)]
 pub struct MainMenuView {
     login_modal: LoginModal,
+    login_or_register_modal: LoginOrRegisterModal,
+    register_modal: RegisterModal,
     server_settings_modal: ServerSettingsModal,
 }
 
 impl MainMenuView {
+    fn render_login_modal(&mut self, ctx: &Context, state: &mut AppState) {
+        let event = self.login_modal.render(ctx, state);
+    }
+
+    fn render_login_or_register_modal(&mut self, ctx: &Context, state: &mut AppState) {
+        let event = self.login_or_register_modal.render(ctx, state);
+        if event == ModalEvent::ChooseLogin {
+            self.login_or_register_modal.set_open(false);
+            self.login_modal.set_open(true);
+        } else if event == ModalEvent::ChooseRegister {
+            self.login_or_register_modal.set_open(false);
+            self.register_modal.set_open(true);
+        }
+    }
+
+    fn render_register_modal(&mut self, ctx: &Context, state: &mut AppState) {
+        let event = self.register_modal.render(ctx, state);
+    }
+
+    fn render_server_settings_modal(&mut self, ctx: &Context, state: &mut AppState) {
+        let event = self.server_settings_modal.render(ctx, state);
+        if event == ModalEvent::SetServerSettings {
+            self.server_settings_modal.set_open(false);
+            self.login_or_register_modal.set_open(true);
+        }
+    }
+
     fn on_sandbox_clicked(&mut self, _ctx: &Context, state: &mut AppState) {
         state.switch_view(ViewID::Sandbox)
     }
 
-    fn on_online_clicked(&mut self, _ctx: &Context, _state: &mut AppState) {}
+    fn on_online_clicked(&mut self, _ctx: &Context, state: &mut AppState) {
+        if (!state.api.is_ready()) {
+            self.server_settings_modal.set_open(true);
+        } else if (state.login_state.lock().get_status() != LoginStateStatus::Success) {
+            self.login_or_register_modal.set_open(true);
+        }
+    }
 }
 
 impl View for MainMenuView {
@@ -25,8 +63,10 @@ impl View for MainMenuView {
     }
 
     fn render(&mut self, ctx: &Context, state: &mut AppState) {
-        self.login_modal.render(ctx, state);
-        self.server_settings_modal.render(ctx, state);
+        self.render_login_modal(ctx, state);
+        self.render_login_or_register_modal(ctx, state);
+        self.render_register_modal(ctx, state);
+        self.render_server_settings_modal(ctx, state);
 
         CentralPanel::default().show(ctx, |ui| {
             let vertical_space = ui.available_size_before_wrap().y;

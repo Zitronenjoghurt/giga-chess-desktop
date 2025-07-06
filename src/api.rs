@@ -1,7 +1,9 @@
 use crate::api::error::{ApiError, ApiResult};
 use crate::persistence::PersistentObject;
 use giga_chess_api_types::body::login::LoginBody;
+use giga_chess_api_types::body::register::RegisterBody;
 use giga_chess_api_types::response::login::LoginResponse;
+use giga_chess_api_types::response::message::MessageResponse;
 use reqwest::{Client, RequestBuilder, StatusCode};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -57,6 +59,9 @@ impl MultiplayerClient {
                     StatusCode::BAD_REQUEST => Err(ApiError::BadRequest(
                         response.text().await.unwrap_or_default(),
                     )),
+                    StatusCode::CONFLICT => Err(ApiError::Collision(
+                        response.text().await.unwrap_or_default(),
+                    )),
                     StatusCode::NOT_FOUND => Err(ApiError::NotFound(
                         response.text().await.unwrap_or_default(),
                     )),
@@ -100,6 +105,33 @@ impl MultiplayerClient {
         });
     }
 
+    pub fn register<F>(
+        &self,
+        username: impl Into<String>,
+        password: impl Into<String>,
+        invite_code: impl Into<String>,
+        callback: F,
+    ) where
+        F: FnOnce(ApiResult<LoginResponse>) + Send + 'static,
+    {
+        let Some(server_url) = &self.server_url else {
+            callback(Err(ApiError::MissingServerUrl));
+            return;
+        };
+
+        let body = RegisterBody {
+            username: username.into(),
+            password: password.into(),
+            invite_code: invite_code.into(),
+        };
+
+        let request = self
+            .client
+            .post(format!("{server_url}/register"))
+            .json(&body);
+        self.spawn_request(request, callback);
+    }
+
     pub fn login<F>(&self, username: impl Into<String>, password: impl Into<String>, callback: F)
     where
         F: FnOnce(ApiResult<LoginResponse>) + Send + 'static,
@@ -115,7 +147,22 @@ impl MultiplayerClient {
         };
 
         let request = self.client.post(format!("{server_url}/login")).json(&body);
+        self.spawn_request(request, callback);
+    }
 
+    pub fn ping<F>(&self, token: &str, callback: F)
+    where
+        F: FnOnce(ApiResult<MessageResponse>) + Send + 'static,
+    {
+        let Some(server_url) = &self.server_url else {
+            callback(Err(ApiError::MissingServerUrl));
+            return;
+        };
+
+        let request = self
+            .client
+            .post(format!("{server_url}/ping"))
+            .bearer_auth(token);
         self.spawn_request(request, callback);
     }
 }

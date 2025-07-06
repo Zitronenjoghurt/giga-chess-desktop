@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::cmp::PartialEq;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub enum LoginStateStatus {
@@ -6,8 +7,13 @@ pub enum LoginStateStatus {
     Idle,
     Loading,
     Success,
-    InvalidCredentials,
     Error,
+}
+
+impl LoginStateStatus {
+    pub fn is_not_successful_nor_loading(&self) -> bool {
+        *self != Self::Loading && *self != Self::Success
+    }
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -16,7 +22,6 @@ pub enum LoginState {
     Idle,
     Loading,
     Success(String),
-    InvalidCredentials,
     Error(String),
 }
 
@@ -26,7 +31,6 @@ impl LoginState {
             Self::Idle => LoginStateStatus::Idle,
             Self::Loading => LoginStateStatus::Loading,
             Self::Success(_) => LoginStateStatus::Success,
-            Self::InvalidCredentials => LoginStateStatus::InvalidCredentials,
             Self::Error(_) => LoginStateStatus::Error,
         }
     }
@@ -43,5 +47,9 @@ impl LoginState {
             Self::Error(error) => Some(error),
             _ => None,
         }
+    }
+
+    pub fn error(error: impl Into<String>) -> Self {
+        Self::Error(error.into())
     }
 }

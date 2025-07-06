@@ -6,7 +6,9 @@ pub type ApiResult<T> = Result<T, ApiError>;
 pub enum ApiError {
     #[error("Bad request: {0}")]
     BadRequest(String),
-    #[error("Not found {0}")]
+    #[error("Collision: {0}")]
+    Collision(String),
+    #[error("Not found: {0}")]
     NotFound(String),
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
