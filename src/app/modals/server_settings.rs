@@ -1,19 +1,14 @@
+use crate::app::components::validated_field::ValidatedField;
 use crate::app::modals::{Modal, ModalEvent};
 use crate::app::state::AppState;
+use crate::app::validation::validate_url;
 use egui::{Button, Id, Ui};
-use url::Url;
 
 #[derive(Debug, Default)]
 pub struct ServerSettingsModal {
     open: bool,
     url: String,
     initialized: bool,
-}
-
-impl ServerSettingsModal {
-    pub fn validate_url(&self) -> bool {
-        Url::parse(&self.url).is_ok()
-    }
 }
 
 impl Modal for ServerSettingsModal {
@@ -35,20 +30,17 @@ impl Modal for ServerSettingsModal {
             self.initialized = true;
         }
 
-        let url_valid = self.validate_url();
-
-        ui.horizontal(|ui| {
-            ui.label("Server URL");
-            ui.text_edit_singleline(&mut self.url);
-            if url_valid {
-                ui.label("✅");
-            } else {
-                ui.colored_label(ui.visuals().error_fg_color, "❌");
-            }
-        });
+        let server_url_response = ValidatedField::new("Server URL", &mut self.url)
+            .label_width(60.0)
+            .validator(validate_url)
+            .error_message("Must be a valid URL.")
+            .show(ui);
 
         let mut event = ModalEvent::None;
-        if ui.add_enabled(url_valid, Button::new("Save")).clicked() {
+        if ui
+            .add_enabled(server_url_response.is_valid, Button::new("Save"))
+            .clicked()
+        {
             state.api.set_server_url(&self.url);
             self.set_open(false);
             event = ModalEvent::SetServerSettings;
