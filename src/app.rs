@@ -10,6 +10,7 @@ mod asset_server;
 mod components;
 mod modals;
 mod state;
+mod validation;
 mod views;
 mod windows;
 

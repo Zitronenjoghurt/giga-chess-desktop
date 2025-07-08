@@ -46,6 +46,8 @@ impl View for SandboxView {
                     self.on_home_clicked(ctx, state);
                 }
 
+                ui.label("Sandbox Mode");
+
                 let mut game_creation_open = self.game_creation_window.is_open();
                 ui.checkbox(&mut game_creation_open, "Game Creation");
                 self.game_creation_window.set_open(game_creation_open);

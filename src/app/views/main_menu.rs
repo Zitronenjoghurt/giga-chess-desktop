@@ -19,6 +19,10 @@ pub struct MainMenuView {
 impl MainMenuView {
     fn render_login_modal(&mut self, ctx: &Context, state: &mut AppState) {
         let event = self.login_modal.render(ctx, state);
+        if event == ModalEvent::LoginSuccess {
+            self.login_modal.set_open(false);
+            state.switch_view(ViewID::OnlineHome);
+        }
     }
 
     fn render_login_or_register_modal(&mut self, ctx: &Context, state: &mut AppState) {
@@ -34,6 +38,10 @@ impl MainMenuView {
 
     fn render_register_modal(&mut self, ctx: &Context, state: &mut AppState) {
         let event = self.register_modal.render(ctx, state);
+        if event == ModalEvent::RegisterSuccess {
+            self.register_modal.set_open(false);
+            state.switch_view(ViewID::OnlineHome);
+        }
     }
 
     fn render_server_settings_modal(&mut self, ctx: &Context, state: &mut AppState) {
@@ -53,6 +61,8 @@ impl MainMenuView {
             self.server_settings_modal.set_open(true);
         } else if (state.login_state.lock().get_status() != LoginStateStatus::Success) {
             self.login_or_register_modal.set_open(true);
+        } else {
+            state.switch_view(ViewID::OnlineHome);
         }
     }
 }
